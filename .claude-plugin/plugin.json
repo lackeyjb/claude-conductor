@@ -3,5 +3,9 @@
   "version": "0.1.0",
   "description": "Context-Driven Development framework for Claude Code",
   "commands": ["./commands/"],
-  "agents": "./agents/"
+  "agents": [
+    "./agents/conductor-planner.md",
+    "./agents/conductor-implementer.md",
+    "./agents/conductor-reviewer.md"
+  ]
 }
