@@ -36,11 +36,26 @@ Execute the implementation workflow for the selected track.
 
 ## Begin Implementation
 
+### Check for Handoff Resume
+
+Before starting, check if resuming from a previous handoff:
+
+1. **Check for handoff state**: Look for `conductor/tracks/<track_id>/handoff-state.json`
+
+2. **If handoff state exists**:
+   - Read the handoff state to get resume context
+   - Announce: "Resuming from handoff at phase '<phase>', task '<next_task>'"
+   - Clear `.context_usage` file to reset threshold tracking
+   - Delete `handoff-state.json` after reading (resume is one-time)
+   - Skip to the `next_task` in the Task Execution Loop
+
+3. **If no handoff state**: Proceed with normal implementation flow
+
 ### Update Track Status
 
 1. Find track heading in `conductor/tracks.md`
-2. Change `## [ ] Track:` to `## [~] Track:`
-3. Commit: `conductor(track): Start track '<description>'`
+2. Change `## [ ] Track:` to `## [~] Track:` (if not already in progress)
+3. Commit: `conductor(track): Start track '<description>'` (if status changed)
 
 ### Load Track Context
 
@@ -124,6 +139,99 @@ The reviewer agent will:
 - Await user confirmation
 - Create checkpoint commit
 - Update plan with checkpoint SHA
+
+### Context Threshold Check
+
+**After each task completes**, check context usage:
+
+1. **Read Context Usage**: Check `conductor/.context_usage` file (written by PostToolUse hook)
+
+2. **Parse Threshold**: Read `conductor/workflow.md` Customization table for `Context Threshold` setting (default: 70%)
+
+3. **Compare**:
+   - If `estimated_percent` < threshold: Continue to next task
+   - If `estimated_percent` >= threshold: Trigger Context Handoff Protocol
+
+## Context Handoff Protocol
+
+When context threshold is reached, execute this protocol:
+
+### 1. Announce Threshold Reached
+
+```
+⚠️ Context threshold reached (X% estimated usage).
+Initiating graceful handoff to preserve work quality...
+```
+
+### 2. Create Checkpoint Commit
+
+```bash
+git add .
+git commit -m "conductor(checkpoint): Context threshold handoff - <track_description>"
+```
+
+### 3. Attach Handoff Metadata (Git Notes)
+
+```bash
+SHA=$(git log -1 --format="%H")
+git notes add -m "Handoff: Context threshold reached
+
+Track: <track_id>
+Phase: <current_phase> (X/Y tasks complete)
+Last Task: <last_task_description> [<sha>]
+Next Task: <next_task_description>
+Threshold: <percentage>%
+
+Resume: /conductor:implement <track_name>" $SHA
+```
+
+### 4. Write Handoff State
+
+Create `conductor/tracks/<track_id>/handoff-state.json`:
+
+```json
+{
+  "created_at": "<ISO timestamp>",
+  "reason": "context_threshold",
+  "threshold_percent": 70,
+  "current_phase": "<phase name>",
+  "phase_progress": "X/Y tasks",
+  "last_completed_task": "<task description>",
+  "last_commit_sha": "<sha>",
+  "next_task": "<task description>",
+  "resume_instructions": [
+    "Start a fresh Claude Code session",
+    "Run /conductor:implement to continue"
+  ]
+}
+```
+
+### 5. Output Handoff Prompt
+
+Display formatted handoff prompt for user:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONDUCTOR HANDOFF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Context threshold reached. Start a fresh session and paste this prompt:
+
+─────────────────────────────────────────────────────
+Continue implementing track "<track_description>" using Conductor.
+
+Key context:
+- Track: <track_id>
+- Phase: <current_phase> (X/Y tasks complete)
+- Next: <next_task_description>
+
+Run: /conductor:implement
+─────────────────────────────────────────────────────
+```
+
+### 6. Stop Execution
+
+**CRITICAL**: Do NOT continue to the next task. The handoff protocol ends the current session's implementation work. Wait for user to start fresh session.
 
 ## Track Completion
 

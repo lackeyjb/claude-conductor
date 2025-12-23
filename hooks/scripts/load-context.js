@@ -44,6 +44,30 @@ async function main() {
     }
   }
 
+  // Check for pending handoff state
+  const tracksDir = path.join(conductorDir, 'tracks');
+  if (fs.existsSync(tracksDir)) {
+    try {
+      const tracks = fs.readdirSync(tracksDir);
+      for (const trackId of tracks) {
+        const handoffFile = path.join(tracksDir, trackId, 'handoff-state.json');
+        if (fs.existsSync(handoffFile)) {
+          try {
+            const handoff = JSON.parse(fs.readFileSync(handoffFile, 'utf8'));
+            context += `\n**⚠️ Handoff Pending:** Track '${trackId}' was paused at ${handoff.threshold_percent || 70}% context threshold.\n`;
+            context += `**Next Task:** ${handoff.next_task || 'Unknown'}\n`;
+            context += `**Resume:** Run \`/conductor:implement\` to continue.\n`;
+            break; // Only show first handoff
+          } catch {
+            // Ignore malformed handoff files
+          }
+        }
+      }
+    } catch {
+      // Ignore errors reading tracks directory
+    }
+  }
+
   // Output JSON with context
   console.log(JSON.stringify({
     hookSpecificOutput: {
