@@ -45,51 +45,45 @@ Analyze the description to infer type:
 
 Do NOT ask user to classify - infer from description.
 
-## Generate Specification (spec.md)
+## Delegate to Planner Agent
 
-### Interactive Questioning
+ALWAYS use the Task tool to delegate specification and plan generation to the planner agent:
 
-Delegate to conductor-planner agent or conduct inline:
+```
+Task tool:
+- subagent_type: 'conductor-planner'
+- prompt: |
+    Create specification and plan for track: <description>
+    Track type: <feature|bug|chore>
 
-1. Announce: "I'll ask a few questions to build a comprehensive specification."
+    Context files to read:
+    - conductor/product.md
+    - conductor/tech-stack.md
+    - conductor/workflow.md
+    - conductor/tracks.md
 
-2. Ask 3-5 questions based on track type:
+    Requirements:
+    1. Conduct interactive questioning (3-5 questions based on track type)
+    2. Generate spec.md following template structure
+    3. Generate plan.md with TDD task structure
+    4. Each phase must end with verification task
 
-**For Features:**
-- What problem does this solve?
-- Who is the target user?
-- What's the expected behavior?
-- Are there any constraints?
-- How should edge cases be handled?
+    Return both artifacts for user review.
+```
 
-**For Bugs:**
-- What is the current (broken) behavior?
-- What is the expected behavior?
-- Steps to reproduce?
+The planner agent will:
+- Conduct interactive questioning based on track type
+- Generate spec.md with functional/non-functional requirements
+- Generate plan.md with TDD-structured tasks
+- Present artifacts for user review and approval
 
-**For Chores:**
-- What needs to be updated/changed?
-- What's the scope of the change?
-- Any dependencies affected?
+## Review Artifacts
 
-3. For each question:
-   - Provide 3 suggested options
-   - Include "Type your own answer"
-   - Wait for response before next question
+After planner agent returns:
 
-### Draft Specification
+### Specification Review
 
-Generate spec.md with:
-- Overview
-- Functional Requirements (with acceptance criteria)
-- Non-Functional Requirements (if applicable)
-- User Stories (for features)
-- Technical Considerations
-- Out of Scope
-
-### Review Loop
-
-Present draft:
+Present the spec.md:
 > "I've drafted the specification. Please review:"
 >
 > ```markdown
@@ -100,42 +94,11 @@ Present draft:
 > A) Approve and continue
 > B) Suggest changes
 
-If B, incorporate feedback and re-present.
+If B, incorporate feedback and re-generate with planner agent.
 
-## Generate Plan (plan.md)
+### Plan Review
 
-### Load Context
-
-- Read confirmed spec.md
-- Read `conductor/workflow.md` for methodology
-
-### Generate Plan
-
-Create plan.md with:
-- Phases (logical groupings)
-- Tasks (actionable items)
-- Sub-tasks (TDD structure if specified in workflow)
-- Verification tasks at end of each phase
-
-### Structure Requirements
-
-1. **Follow workflow methodology** (e.g., TDD):
-   ```markdown
-   - [ ] Task: Implement user validation
-     - [ ] Write tests for email validation
-     - [ ] Implement email validation
-     - [ ] Write tests for password validation
-     - [ ] Implement password validation
-   ```
-
-2. **Include phase verification**:
-   ```markdown
-   - [ ] Conductor: User Manual Verification 'Phase 1'
-   ```
-
-### Review Loop
-
-Present draft:
+Present the plan.md:
 > "I've created the implementation plan. Please review:"
 >
 > ```markdown
@@ -145,6 +108,8 @@ Present draft:
 > Does this plan cover all the necessary steps?
 > A) Approve and create track
 > B) Suggest changes
+
+If B, incorporate feedback and re-generate with planner agent.
 
 ## Create Track Artifacts
 
