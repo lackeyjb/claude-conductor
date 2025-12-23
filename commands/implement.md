@@ -53,119 +53,77 @@ Read into context:
 
 For each task in plan.md (in order):
 
-### Step 1: Mark Task In Progress
+### Delegate to Implementer Agent
 
-Edit plan.md: Change `- [ ] Task:` to `- [~] Task:`
+ALWAYS use the Task tool to delegate task execution to the implementer agent:
 
-### Step 2: TDD Red Phase
+```
+Task tool:
+- subagent_type: 'conductor-implementer'
+- prompt: |
+    Execute task: <task description>
 
-1. Identify what needs to be tested
-2. Create or update test file
-3. Write failing test that defines expected behavior
-4. Run tests: Confirm FAILURE
-5. If tests pass prematurely, the test is wrong - fix it
+    Track ID: <track_id>
+    Context files:
+    - conductor/tracks/<track_id>/spec.md
+    - conductor/tracks/<track_id>/plan.md
+    - conductor/workflow.md
+    - conductor/tech-stack.md
 
-### Step 3: TDD Green Phase
+    Requirements:
+    1. Mark task in progress in plan.md
+    2. Follow TDD: Red → Green → Refactor
+    3. Verify coverage meets threshold (>80%)
+    4. Run quality checks (lint, typecheck)
+    5. Commit with conventional message
+    6. Attach git notes with summary
+    7. Update plan.md with commit SHA
+    8. Commit plan update
 
-1. Write MINIMUM code to make test pass
-2. No extra features, no premature optimization
-3. Run tests: Confirm PASS
-4. If tests fail, debug and fix
-
-### Step 4: Refactor Phase
-
-1. With passing tests as safety net:
-   - Remove duplication
-   - Improve naming
-   - Simplify logic
-2. Run tests after each change
-3. All tests must stay green
-
-### Step 5: Verify Coverage
-
-Run coverage tool for the project:
-```bash
-# JavaScript/TypeScript
-npx jest --coverage
-
-# Python
-pytest --cov=src
-
-# Go
-go test -cover ./...
+    Report back when task is complete or if blocked.
 ```
 
-Target: Coverage meets workflow.md requirement (default >80%)
-
-### Step 6: Commit Code Changes
-
-```bash
-git add <changed files>
-git commit -m "<type>(<scope>): <description>"
-```
-
-Types: feat, fix, refactor, test, docs, style, chore
-
-### Step 7: Attach Git Notes
-
-Get commit SHA and attach summary:
-```bash
-SHA=$(git log -1 --format="%H")
-git notes add -m "Task: <task name>
-Changes: <summary>
-Files: <list>" $SHA
-```
-
-### Step 8: Update Plan
-
-1. Edit plan.md
-2. Change `- [~] Task:` to `- [x] Task: ... [<short-sha>]`
-3. Commit: `conductor(plan): Complete task '<task name>'`
+The implementer agent will:
+- Execute the full TDD cycle
+- Commit code changes with proper messages
+- Update plan.md with progress
+- Report completion or blockers
 
 ### Phase Completion Check
 
-When all tasks in a phase are complete:
+When all tasks in a phase are complete, delegate to reviewer agent:
 
-1. **Announce**: "Phase '<name>' complete. Running verification protocol."
+```
+Task tool:
+- subagent_type: 'conductor-reviewer'
+- prompt: |
+    Verify phase: <phase name>
 
-2. **Ensure Coverage**:
-   - List files changed in this phase
-   - Verify each has corresponding tests
-   - Create missing tests if needed
+    Track ID: <track_id>
+    Context files:
+    - conductor/tracks/<track_id>/spec.md
+    - conductor/tracks/<track_id>/plan.md
+    - conductor/workflow.md
 
-3. **Run Full Test Suite**:
-   - Announce command before running
-   - If failures, attempt fix (max 2 tries)
-   - If still failing, ask user for guidance
+    Requirements:
+    1. Announce verification protocol start
+    2. Verify test coverage for all changed files
+    3. Run automated tests
+    4. Generate manual verification plan
+    5. Await user confirmation
+    6. Create checkpoint commit with git notes
+    7. Update plan.md with checkpoint SHA
 
-4. **Generate Manual Verification Plan**:
-   Based on phase goals from spec.md, provide specific steps:
-   ```
-   Manual Verification Steps:
-   1. Start the development server: `npm run dev`
-   2. Open browser to: http://localhost:3000
-   3. Confirm you see: [expected result]
-   ```
+    Do not proceed past step 5 without explicit user approval.
+```
 
-5. **Await User Confirmation**:
-   "Does this meet your expectations? Please confirm or provide feedback."
-
-6. **Create Checkpoint**:
-   ```bash
-   git add .
-   git commit -m "conductor(checkpoint): Complete phase '<name>'"
-   ```
-
-7. **Attach Verification Report**:
-   ```bash
-   git notes add -m "Phase: <name>
-   Automated Tests: PASSED
-   Manual Verification: CONFIRMED
-   Coverage: XX%" $(git log -1 --format="%H")
-   ```
-
-8. **Update Plan with Checkpoint SHA**:
-   Add `[checkpoint: <sha>]` to phase heading
+The reviewer agent will:
+- Verify test coverage for phase changes
+- Run full test suite
+- Generate manual verification steps
+- Await user confirmation
+- Create checkpoint commit
+- Update plan with checkpoint SHA
 
 ## Track Completion
 
