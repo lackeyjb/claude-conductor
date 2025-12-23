@@ -6,28 +6,20 @@ Context-Driven Development framework for Claude Code.
 
 ## Installation
 
-### Option 1: Symlink (Development)
+### Development / Testing
+
+Load the plugin directly using the `--plugin-dir` flag:
 
 ```bash
-ln -sf /path/to/conductor ~/.claude/plugins/conductor
+claude --plugin-dir /path/to/conductor
 ```
 
-### Option 2: Settings Configuration
+### Production (via Marketplace)
 
-Add to `~/.claude/settings.json`:
+Once published to a marketplace, install with:
 
-```json
-{
-  "plugins": ["/path/to/conductor"]
-}
-```
-
-Or for project-specific installation, add to `.claude/settings.json`:
-
-```json
-{
-  "plugins": ["./path/to/conductor"]
-}
+```bash
+claude plugin install conductor@<marketplace-name>
 ```
 
 ## Commands
@@ -42,7 +34,7 @@ Or for project-specific installation, add to `.claude/settings.json`:
 
 ## Quick Start
 
-1. Install the plugin (see above)
+1. Start Claude Code with the plugin: `claude --plugin-dir /path/to/conductor`
 2. Navigate to your project directory
 3. Run `/conductor:setup` to initialize
 4. Run `/conductor:newTrack` to create your first track
