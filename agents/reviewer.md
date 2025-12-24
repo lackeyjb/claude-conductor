@@ -2,7 +2,7 @@
 name: reviewer
 description: Specialist for phase verification, test coverage analysis, and checkpoint creation. Use at end of each phase to verify quality and create checkpoints.
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: sonnet
+model: claude-sonnet-4-5-20250929
 ---
 
 # Conductor Review Agent

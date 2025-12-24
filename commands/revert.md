@@ -2,7 +2,7 @@
 description: Revert a track, phase, or task using git-aware rollback
 argument-hint: [track|phase|task] [name]
 allowed-tools: Read, Bash, Glob, Grep
-model: haiku
+model: claude-haiku-4-5-20251001
 ---
 
 # Conductor Revert

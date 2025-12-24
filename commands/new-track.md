@@ -2,6 +2,7 @@
 description: Create a new feature or bug track with spec and plan
 argument-hint: [description]
 allowed-tools: Read, Write, Glob, Task
+model: claude-opus-4-5-20251101
 ---
 
 # Conductor New Track

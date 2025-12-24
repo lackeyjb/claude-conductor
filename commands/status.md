@@ -1,7 +1,7 @@
 ---
 description: Display current progress of Conductor-managed project
 allowed-tools: Read, Glob, Bash
-model: haiku
+model: claude-haiku-4-5-20251001
 ---
 
 # Conductor Status

@@ -2,6 +2,7 @@
 description: Execute tasks from the current track following TDD workflow
 argument-hint: [<track-name>] [--all]
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Task
+model: claude-sonnet-4-5-20250929
 ---
 
 # Conductor Implement
