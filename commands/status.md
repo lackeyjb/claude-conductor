@@ -6,123 +6,42 @@ model: claude-haiku-4-5-20251001
 
 # Conductor Status
 
-Display a comprehensive status overview of the project.
+Display comprehensive project status overview.
 
 ## Pre-flight Check
 
-1. Use Bash to check if tracks file exists: `test -f conductor/tracks.md && echo "exists" || echo "not found"`
-2. If "not found": "Conductor not set up. Run `/conductor:setup` to initialize."
-3. If "exists", read `conductor/tracks.md` and verify it is not empty
-4. If empty: "No tracks found. Create one with `/conductor:new-track`."
+1. Check `conductor/tracks.md` exists. If not: "Run `/conductor:setup` to initialize."
+2. If empty: "No tracks. Create one with `/conductor:new-track`."
 
 ## Gather Data
 
-### Read Project Context
-
-- `conductor/product.md` - Extract project name
-- `conductor/tracks.md` - Parse all tracks
-
-### Parse Each Track
-
-For each track directory in `conductor/tracks/`:
-
-1. Read `plan.md`
-2. Count tasks by status:
-   - `[ ]` = Pending
-   - `[~]` = In Progress
-   - `[x]` = Completed
-3. Identify current phase and task
+- Read `conductor/product.md` for project name
+- Read `conductor/tracks.md` for track list
+- For each track in `conductor/tracks/`:
+  - Read `plan.md`
+  - Count tasks: `[ ]` pending, `[~]` in-progress, `[x]` completed
+  - Identify current phase and task
 
 ## Generate Report
 
-Format and display:
+Display status with:
+- Project name and timestamp
+- Tracks overview: Completed ✅ / In Progress 🔄 / Pending ⏳ counts
+- Current focus: Track, Phase, Task (all `[~]` items)
+- Progress bar: `[████░░░░] X%` (completed/total tasks)
+- Track details: Tree view with status indicators per phase/task
+- Next actions: Upcoming 2-3 tasks
+- Call to action: "Run /conductor:implement to continue"
 
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  CONDUCTOR STATUS REPORT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### If Blockers
 
-  Project: <from product.md>
-  Generated: <current timestamp>
-
-TRACKS OVERVIEW
-───────────────────────────────────────────────────
-  Completed:   <count>  ✅
-  In Progress: <count>  🔄
-  Pending:     <count>  ⏳
-
-CURRENT FOCUS
-───────────────────────────────────────────────────
-  Track: <current track description>
-  Phase: <current phase name> [~]
-  Task:  <current task name> [~]
-
-PROGRESS
-───────────────────────────────────────────────────
-  [████████████░░░░░░░░] 60%  (12/20 tasks)
-
-TRACK DETAILS
-───────────────────────────────────────────────────
-
-  [x] Track: User Authentication
-      └── 100% complete (8/8 tasks)
-
-  [~] Track: Dashboard UI
-      ├── Phase 1: Setup ✅ (3/3)
-      ├── Phase 2: Components 🔄 (2/5)
-      │   ├── [x] Create header component
-      │   ├── [x] Create sidebar component
-      │   ├── [~] Create main content area  ← CURRENT
-      │   ├── [ ] Create footer component
-      │   └── [ ] Add responsive layout
-      └── Phase 3: Integration ⏳ (0/4)
-
-  [ ] Track: API Integration
-      └── Not started (0/12 tasks)
-
-NEXT ACTIONS
-───────────────────────────────────────────────────
-  1. Complete: "Create main content area"
-  2. Then: "Create footer component"
-  3. After phase: Manual verification required
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Run /conductor:implement to continue working
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
-## Additional Information
-
-### If Blockers Exist
-
-If any task is marked with "BLOCKED" in the plan:
-
-```
-⚠️  BLOCKERS DETECTED
-───────────────────────────────────────────────────
-  Task: "Integrate payment API"
-  Reason: Waiting for API credentials from vendor
-
-  Task: "Deploy to production"
-  Reason: Pending security review
-```
+Show section with blocked tasks and reasons (from plan.md BLOCKED markers).
 
 ### If All Complete
 
-```
-🎉 ALL TRACKS COMPLETE!
-───────────────────────────────────────────────────
-  Total tracks completed: 5
-  Total tasks completed: 47
+Show celebration: "🎉 ALL TRACKS COMPLETE! Create new track with /conductor:new-track"
 
-  Create a new track with /conductor:new-track
-```
+### Summary Stats
 
-### Summary Statistics
-
-At the end, provide:
-
-- Total phases across all tracks
-- Total tasks across all tracks
+- Total phases/tasks across all tracks
 - Overall completion percentage
-- Estimated remaining work (based on average task time if available)

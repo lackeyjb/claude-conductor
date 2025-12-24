@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Stop hook - Remind about in-progress work
 
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 
 async function main() {
@@ -14,11 +14,12 @@ async function main() {
   const cwd = data.cwd || process.cwd();
   const tracksFile = path.join(cwd, 'conductor', 'tracks.md');
 
-  if (!fs.existsSync(tracksFile)) {
+  // Try to read tracks file (TOCTOU fix)
+  const content = await fs.readFile(tracksFile, 'utf8').catch(() => null);
+  if (!content) {
     process.exit(0);
   }
 
-  const content = fs.readFileSync(tracksFile, 'utf8');
   const inProgress = (content.match(/\[in-progress\]/g) || []).length;
 
   if (inProgress > 0) {

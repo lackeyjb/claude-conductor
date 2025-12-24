@@ -6,89 +6,26 @@ allowed-tools: Read, Glob
 
 # Conductor Context Awareness
 
-This skill provides automatic context loading for Conductor-managed projects.
+Automatic context loading for Conductor-managed projects.
 
 ## When to Activate
 
-Activate this skill when:
-- A `conductor/` directory exists in the project
-- User is asking about implementation tasks
-- User is working on features or bugs
-- User mentions "the plan" or "tracks"
+When `conductor/` directory exists and user is: implementing tasks, working on features/bugs, or mentions "plan"/"tracks".
 
 ## Context Files
 
-When detected, consider these files:
+| File | Contains | Use For |
+|------|----------|---------|
+| `product.md` | Vision, goals, users, features, metrics | The WHY |
+| `tech-stack.md` | Languages, frameworks, DBs, libraries, architecture | The HOW |
+| `workflow.md` | Methodology (TDD), coverage, commits, quality gates | The PROCESS |
+| `tracks.md` | All tracks (features/bugs), status, priorities | The WHAT |
+| `code_styleguides/` | Language-specific standards, conventions, practices | The STYLE |
 
-### 1. Product Context (`conductor/product.md`)
+## Workflow Reference
 
-Contains:
-- Product vision and goals
-- Target users
-- Key features
-- Success metrics
-
-**Use for**: Understanding WHAT we're building and WHY.
-
-### 2. Tech Stack (`conductor/tech-stack.md`)
-
-Contains:
-- Programming languages
-- Frameworks
-- Databases
-- Key libraries
-- Architecture decisions
-
-**Use for**: Making technology choices consistent with project standards.
-
-### 3. Workflow (`conductor/workflow.md`)
-
-Contains:
-- Development methodology (likely TDD)
-- Coverage requirements
-- Commit conventions
-- Quality gates
-
-**Use for**: Following the established development process.
-
-### 4. Tracks (`conductor/tracks.md`)
-
-Contains:
-- List of all tracks (features/bugs)
-- Current status of each
-- Links to track details
-
-**Use for**: Understanding current work and priorities.
-
-### 5. Code Styleguides (`conductor/code_styleguides/`)
-
-Contains:
-- Language-specific coding standards
-- Naming conventions
-- Best practices
-
-**Use for**: Writing code that matches project conventions.
-
-## Quick Reference
-
-### Before Starting Implementation
-
-1. Check `conductor/tracks.md` for current track
-2. Read the track's `spec.md` for requirements
-3. Read the track's `plan.md` for tasks
-4. Follow `conductor/workflow.md` methodology
-
-### During Implementation
-
-- Follow TDD if specified in workflow.md
-- Meet coverage targets from workflow.md
-- Use commit format from workflow.md
-- Apply styleguides from code_styleguides/
-
-### Key Context Points
-
-| Aspect | Where to Find |
-|--------|---------------|
+| Need | Read |
+|------|------|
 | Coverage target | workflow.md |
 | Commit format | workflow.md |
 | Test methodology | workflow.md |
@@ -96,34 +33,32 @@ Contains:
 | Coding style | code_styleguides/ |
 | Current focus | tracks.md |
 
-## Integration with Other Skills
+## Loading Sequence
 
-This skill works with:
-- **tdd-workflow**: For test-driven development guidance
-- **code-styleguides**: For language-specific conventions
+**Before starting implementation:**
+1. Check `tracks.md` for current track
+2. Read track's `spec.md` for requirements
+3. Read track's `plan.md` for tasks
+4. Follow `workflow.md` methodology
 
-## Common Patterns
+**Full context load order:**
+1. `product.md` (why)
+2. `tech-stack.md` (how)
+3. `tracks.md` (what)
+4. Track's `spec.md` and `plan.md`
 
-### Finding Current Task
+## Quick Commands
 
 ```bash
 # Find in-progress items
 grep -r "\[~\]" conductor/tracks/*/plan.md
-```
 
-### Understanding Track Status
-
-```bash
 # Count by status
-grep -c "\[ \]" conductor/tracks.md  # Pending
-grep -c "\[~\]" conductor/tracks.md  # In Progress
-grep -c "\[x\]" conductor/tracks.md  # Complete
+grep -c "\[ \]" conductor/tracks.md   # Pending
+grep -c "\[~\]" conductor/tracks.md   # In progress
+grep -c "\[x\]" conductor/tracks.md   # Complete
 ```
 
-### Loading Full Context
+## Integration
 
-Read in this order:
-1. `conductor/product.md` (the why)
-2. `conductor/tech-stack.md` (the how)
-3. `conductor/tracks.md` (the what)
-4. Current track's `spec.md` and `plan.md`
+Works with: **tdd-workflow** (TDD guidance), **code-styleguides** (language conventions)

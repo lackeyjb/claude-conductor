@@ -27,17 +27,12 @@ Execute the implementation workflow for the selected track.
 
 ## Argument Parsing
 
-Parse $ARGUMENTS to determine execution mode:
-
-1. **Check for `--all` flag**: If $ARGUMENTS contains `--all`, set `run_all_phases = true`
-2. **Extract track name**: If $1 exists and doesn't start with `--`, use it as the track name
-
-Examples:
-
-- `/implement` → No track name, single-phase mode (interactive selection)
-- `/implement user-auth` → Track "user-auth", single-phase mode
-- `/implement --all` → No track name, all-phases mode
-- `/implement user-auth --all` → Track "user-auth", all-phases mode
+| Pattern | Track Selection | Phase Mode |
+|---------|----------------|------------|
+| `/implement` | Auto-select first incomplete | Single-phase |
+| `/implement user-auth` | Match "user-auth" | Single-phase |
+| `/implement --all` | Auto-select first incomplete | All-phases |
+| `/implement user-auth --all` | Match "user-auth" | All-phases |
 
 ## Track Selection
 
@@ -106,73 +101,19 @@ Build ordered list of phases with their status and task counts.
 ## Phase Selection
 
 ### If `--all` flag is set
+Skip selection. Announce "Running all remaining phases for track '<description>'." Proceed to Task Execution Loop.
 
-Skip interactive selection. Announce:
+### If `--all` flag is NOT set (single-phase mode)
 
-```
-Running all remaining phases for track '<description>'.
-```
+| Scenario | Action |
+|----------|--------|
+| No incomplete phases | Announce complete. Offer `/conductor:status` or `/conductor:new-track`. **STOP** |
+| Exactly 1 incomplete | Auto-select. Announce "Only one phase remaining: Phase N: <name>. Proceeding..." |
+| Multiple incomplete | Use AskUserQuestion with options for each phase + "All remaining" option |
 
-Proceed directly to Task Execution Loop with all incomplete phases.
-
-### If `--all` flag is NOT set (default: single-phase mode)
-
-#### If no incomplete phases
-
-```
-All phases complete for this track!
-
-Options:
-A) Run /conductor:status to see overall progress
-B) Run /conductor:new-track to create a new track
-```
-
-**STOP execution.**
-
-#### If exactly one incomplete phase
-
-Auto-select the single remaining phase:
-
-```
-Only one phase remaining: Phase <N>: <name>
-Proceeding with implementation...
-```
-
-#### If multiple incomplete phases
-
-Present interactive selection:
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  PHASE SELECTION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  Track: <track description>
-
-  Available phases:
-
-  [x] Phase 1: Setup                    [complete]
-  [ ] Phase 2: Core Features            [in progress - 3/7 tasks]
-  [ ] Phase 3: Integration              [pending - 0/5 tasks]
-  [ ] Phase 4: Polish                   [pending - 0/3 tasks]
-
-───────────────────────────────────────────────────
-
-  Which phase would you like to implement?
-
-  A) Phase 2: Core Features (recommended - continue current)
-  B) Phase 3: Integration
-  C) Phase 4: Polish
-  D) All remaining phases (--all behavior)
-
-  Please select an option.
-```
-
-#### Process User Selection
-
-1. If A, B, or C: Set `selected_phase = <chosen phase number>`
-2. If D: Set `run_all_phases = true`
-3. Invalid input: Re-prompt with clarification
+**Processing selection:**
+- If phase selected: Set `selected_phase = N`
+- If "All remaining": Set `run_all_phases = true`
 
 ## Task Execution Loop
 
@@ -261,156 +202,51 @@ The reviewer agent will:
 
 ### After Phase Verification Completes
 
-#### If running single phase (default mode)
+**Single-phase mode:** Announce "Phase N: <name> complete. Checkpoint: <sha>". Use AskUserQuestion: Continue to next phase / Take a break / Check status. Act accordingly.
 
-Announce phase completion:
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  PHASE COMPLETE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  Phase <N>: <name> has been completed and checkpointed.
-
-  Checkpoint: <sha>
-  Tasks completed: <count>
-
-───────────────────────────────────────────────────
-
-  Next steps:
-
-  A) Continue to Phase <N+1>: <next phase name>
-  B) Take a break (run /conductor:implement later)
-  C) Check status (/conductor:status)
-
-  Would you like to continue to the next phase?
-```
-
-- **If user selects A**: Continue to next phase (set `selected_phase` to next incomplete phase)
-- **If user selects B or C**: Stop execution gracefully
-
-#### If running all phases (--all mode)
-
-Continue directly to next phase without prompting. Only stop at track completion or context threshold.
+**All-phases mode:** Continue directly to next phase. Only stop at track completion or threshold.
 
 ### Context Threshold Check
 
-**After each task completes**, check context usage:
-
-1. **Read Context Usage**: Check `conductor/.context_usage` file (written by PostToolUse hook)
-
-2. **Parse Threshold**: Read `conductor/workflow.md` Customization table for `Context Threshold` setting (default: 70%)
-
-3. **Compare**:
-   - If `estimated_percent` < threshold: Continue to next task
-   - If `estimated_percent` >= threshold: Trigger Context Handoff Protocol
+After each task: Check `conductor/.context_usage` (written by hook). If `estimated_percent >= threshold`, trigger handoff protocol.
 
 ## Context Handoff Protocol
 
-When context threshold is reached, execute this protocol:
+When threshold reached:
 
-### 1. Announce Threshold Reached
+1. **Announce:** "⚠️ Context threshold reached (X%). Initiating handoff..."
 
-```
-⚠️ Context threshold reached (X% estimated usage).
-Initiating graceful handoff to preserve work quality...
-```
+2. **Checkpoint Commit:**
+   ```bash
+   git add . && git commit -m "conductor(checkpoint): Context threshold handoff - <track>"
+   ```
 
-### 2. Create Checkpoint Commit
+3. **Git Notes:**
+   ```bash
+   git notes add -m "Handoff: Threshold reached. Track: <track_id>, Phase: <phase> (X/Y tasks), Next: <next_task>" $(git log -1 --format="%H")
+   ```
 
-```bash
-git add .
-git commit -m "conductor(checkpoint): Context threshold handoff - <track_description>"
-```
+4. **Write `handoff-state.json`:** Save current phase, task, mode (`run_all_phases`, `selected_phase`) to `conductor/tracks/<track_id>/handoff-state.json`
 
-### 3. Attach Handoff Metadata (Git Notes)
+5. **Display Handoff Prompt:**
+   ```
+   CONDUCTOR HANDOFF - Context threshold reached.
 
-```bash
-SHA=$(git log -1 --format="%H")
-git notes add -m "Handoff: Context threshold reached
+   Start fresh session and run: /conductor:implement
 
-Track: <track_id>
-Phase: <current_phase> (X/Y tasks complete)
-Last Task: <last_task_description> [<sha>]
-Next Task: <next_task_description>
-Threshold: <percentage>%
+   Resume context:
+   - Track: <track_id>
+   - Phase: <phase> (X/Y tasks)
+   - Next: <next_task>
+   ```
 
-Resume: /conductor:implement <track_name>" $SHA
-```
-
-### 4. Write Handoff State
-
-Create `conductor/tracks/<track_id>/handoff-state.json`:
-
-```json
-{
-  "created_at": "<ISO timestamp>",
-  "reason": "context_threshold",
-  "threshold_percent": 70,
-  "current_phase": "<phase name>",
-  "current_phase_number": 2,
-  "phase_progress": "X/Y tasks",
-  "run_all_phases": false,
-  "selected_phase": 2,
-  "last_completed_task": "<task description>",
-  "last_commit_sha": "<sha>",
-  "next_task": "<task description>",
-  "resume_instructions": [
-    "Start a fresh Claude Code session",
-    "Run /conductor:implement to continue"
-  ]
-}
-```
-
-The `run_all_phases` and `selected_phase` fields preserve the phase mode across sessions.
-
-### 5. Output Handoff Prompt
-
-Display formatted handoff prompt for user:
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONDUCTOR HANDOFF
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Context threshold reached. Start a fresh session and paste this prompt:
-
-─────────────────────────────────────────────────────
-Continue implementing track "<track_description>" using Conductor.
-
-Key context:
-- Track: <track_id>
-- Phase: <current_phase> (X/Y tasks complete)
-- Next: <next_task_description>
-
-Run: /conductor:implement
-─────────────────────────────────────────────────────
-```
-
-### 6. Stop Execution
-
-**CRITICAL**: Do NOT continue to the next task. The handoff protocol ends the current session's implementation work. Wait for user to start fresh session.
+6. **STOP:** Do NOT continue to next task. Wait for user to start fresh session.
 
 ## Track Completion
 
 When all phases complete:
 
-1. **Update tracks.md**: Change `## [~] Track:` to `## [x] Track:`
-
-2. **Synchronize Documentation**:
-
-   - Review if product.md needs updates
-   - Review if tech-stack.md needs updates
-   - Propose changes, await approval before writing
-
-3. **Offer Cleanup**:
-
-   ```
-   Track '<description>' complete! Options:
-   A) Archive: Move to conductor/archive/
-   B) Delete: Permanently remove
-   C) Skip: Leave in tracks.md
-   ```
-
-4. **Announce Completion**:
-   "Track complete! Run `/conductor:status` to see overall progress."
+1. Update `tracks.md`: `[~]` → `[x]`
+2. Review if `product.md` or `tech-stack.md` need updates (propose, await approval)
+3. Use AskUserQuestion: Archive to conductor/archive / Delete / Leave as-is
+4. Announce: "Track complete! Run `/conductor:status` for overall progress."

@@ -6,91 +6,54 @@ allowed-tools: Read, Glob
 
 # Code Styleguides
 
-This skill provides language-specific coding standards and best practices.
+Language-specific coding standards and best practices.
 
 ## How It Works
 
-This skill reads project-level styleguides from `conductor/code_styleguides/`. These files are copied to your project during `/conductor:setup` based on your tech stack.
+Reads project-level styleguides from `conductor/code_styleguides/` (copied during `/conductor:setup` based on tech stack).
 
 ## Supported Languages
 
-| Language | File Extension | Styleguide Location |
-|----------|----------------|---------------------|
-| TypeScript | `.ts`, `.tsx` | `conductor/code_styleguides/typescript.md` |
-| Python | `.py` | `conductor/code_styleguides/python.md` |
+| Language | Extensions | Styleguide File |
+|----------|------------|-----------------|
+| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts` | `conductor/code_styleguides/typescript.md` |
+| Python | `.py`, `.pyi` | `conductor/code_styleguides/python.md` |
 | Go | `.go` | `conductor/code_styleguides/go.md` |
-| JavaScript | `.js`, `.jsx` | `conductor/code_styleguides/javascript.md` |
-| HTML/CSS | `.html`, `.css`, `.scss` | `conductor/code_styleguides/html-css.md` |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | `conductor/code_styleguides/javascript.md` |
+| HTML/CSS | `.html`, `.css`, `.scss`, `.sass` | `conductor/code_styleguides/html-css.md` |
 
 ## When to Activate
 
-Activate this skill when:
-- Writing new code in any supported language
-- Reviewing code for style compliance
-- Refactoring existing code
-- Setting up new files or modules
+Writing new code, reviewing code, refactoring, or setting up new files/modules.
 
-## Language Detection
+## Universal Principles
 
-Automatically apply the relevant styleguide based on file extension:
-- **TypeScript**: `.ts`, `.tsx`, `.mts`, `.cts`
-- **Python**: `.py`, `.pyi`
-- **Go**: `.go`
-- **JavaScript**: `.js`, `.jsx`, `.mjs`, `.cjs`
-- **HTML/CSS**: `.html`, `.htm`, `.css`, `.scss`, `.sass`, `.less`
-
-## Setup Required
-
-If styleguides don't exist in your project:
-1. Run `/conductor:setup` to initialize the conductor environment
-2. Or manually copy templates from `templates/code-styleguides/` to `conductor/code_styleguides/`
-
-Check for styleguides:
-```bash
-ls conductor/code_styleguides/
-```
-
-## Common Principles
-
-These principles apply across all languages:
-
-### Naming
-- Use descriptive, meaningful names
-- Prefer clarity over brevity
-- Be consistent within the codebase
-
-### Structure
-- Keep functions/methods focused (single responsibility)
-- Limit nesting depth (max 3-4 levels)
-- Group related code together
-
-### Documentation
-- Document the "why", not the "what"
-- Keep comments up-to-date with code
-- Use docstrings for public APIs
-
-### Error Handling
-- Handle errors explicitly
-- Fail fast with clear messages
-- Never silently swallow errors
-
-### Testing
-- Write tests alongside code (TDD)
-- Test behavior, not implementation
-- Aim for high coverage on critical paths
-
-## Integration
-
-This skill works with:
-- **conductor-context**: For project-specific style overrides
-- **tdd-workflow**: For language-specific test patterns
+| Aspect | Guideline |
+|--------|-----------|
+| **Naming** | Descriptive, meaningful; clarity over brevity; consistency |
+| **Structure** | Single responsibility; max 3-4 nesting levels; group related code |
+| **Documentation** | Document "why" not "what"; keep updated; docstrings for public APIs |
+| **Errors** | Handle explicitly; fail fast with clear messages; never swallow |
+| **Testing** | Write alongside code (TDD); test behavior not implementation; high coverage on critical paths |
 
 ## Quick Reference
 
-| Aspect | Recommendation |
-|--------|----------------|
+| Setting | Recommendation |
+|---------|----------------|
 | Line length | 80-120 characters |
 | Indentation | 2 spaces (JS/TS), 4 spaces (Python), tabs (Go) |
-| Naming | Language-specific conventions |
+| Naming | Follow language conventions |
 | Imports | Organized and grouped |
 | Comments | Minimal, meaningful |
+
+## Setup
+
+If styleguides missing:
+1. Run `/conductor:setup` to initialize
+2. Or copy from `templates/code-styleguides/` to `conductor/code_styleguides/`
+
+Check: `ls conductor/code_styleguides/`
+
+## Integration
+
+Works with: **conductor-context** (project overrides), **tdd-workflow** (language test patterns)

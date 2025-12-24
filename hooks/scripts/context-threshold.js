@@ -5,8 +5,13 @@
 // completions as a proxy for context accumulation. Each Task tool call
 // (subagent delegation) represents significant context growth.
 
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
+
+// Simple in-memory cache for workflow threshold (unlikely to change mid-session)
+let cachedThreshold = null;
+let cacheTime = null;
+const CACHE_TTL_MS = 60000; // 1 minute
 
 async function main() {
   let input = '';
@@ -19,32 +24,37 @@ async function main() {
   const conductorDir = path.join(cwd, 'conductor');
   const toolName = data.tool_name || '';
 
-  // Only track if conductor directory exists and this is a Task tool call
-  if (!fs.existsSync(conductorDir) || toolName !== 'Task') {
+  // Only track Task tool completions
+  if (toolName !== 'Task') {
     process.exit(0);
   }
 
+  // Parallel reads: context file + workflow file
   const contextFile = path.join(conductorDir, '.context_usage');
+  const workflowFile = path.join(conductorDir, 'workflow.md');
 
-  // Read existing usage or initialize
-  let usage = {
-    task_completions: 0,
-    session_id: data.session_id || 'unknown',
-    started_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
+  const [existingUsage, workflowContent] = await Promise.all([
+    fs.readFile(contextFile, 'utf8')
+      .then(JSON.parse)
+      .catch(() => null),
+    fs.readFile(workflowFile, 'utf8')
+      .catch(() => null)
+  ]);
 
-  if (fs.existsSync(contextFile)) {
-    try {
-      const existing = JSON.parse(fs.readFileSync(contextFile, 'utf8'));
-      // Reset if different session
-      if (existing.session_id === data.session_id) {
-        usage = existing;
-      }
-    } catch {
-      // Ignore parse errors, use fresh state
-    }
+  // If no conductor directory exists, exit early
+  if (workflowContent === null) {
+    process.exit(0);
   }
+
+  // Initialize or restore usage tracking
+  let usage = existingUsage && existingUsage.session_id === (data.session_id || 'unknown')
+    ? existingUsage
+    : {
+        task_completions: 0,
+        session_id: data.session_id || 'unknown',
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
   // Increment task completion count
   usage.task_completions += 1;
@@ -56,21 +66,19 @@ async function main() {
   const maxTasksPerSession = 10;
   usage.estimated_percent = Math.min(100, Math.round((usage.task_completions / maxTasksPerSession) * 100));
 
-  fs.writeFileSync(contextFile, JSON.stringify(usage, null, 2));
+  // Write updated usage (non-blocking async)
+  await fs.writeFile(contextFile, JSON.stringify(usage, null, 2));
 
-  // Read threshold from workflow.md or use default
+  // Get threshold (cached for 1 minute to avoid repeated parsing)
   let threshold = 70;
-  const workflowFile = path.join(conductorDir, 'workflow.md');
-  if (fs.existsSync(workflowFile)) {
-    try {
-      const workflowContent = fs.readFileSync(workflowFile, 'utf8');
-      const thresholdMatch = workflowContent.match(/Context Threshold[^|]*\|[^|]*\|[^`]*`(\d+)%`/i);
-      if (thresholdMatch) {
-        threshold = parseInt(thresholdMatch[1], 10);
-      }
-    } catch {
-      // Use default threshold
-    }
+  const now = Date.now();
+  if (cachedThreshold !== null && cacheTime !== null && (now - cacheTime) < CACHE_TTL_MS) {
+    threshold = cachedThreshold;
+  } else {
+    const thresholdMatch = workflowContent.match(/Context Threshold[^|]*\|[^|]*\|[^`]*`(\d+)%`/i);
+    threshold = thresholdMatch ? parseInt(thresholdMatch[1], 10) : 70;
+    cachedThreshold = threshold;
+    cacheTime = now;
   }
 
   // Output notification when threshold is reached or exceeded

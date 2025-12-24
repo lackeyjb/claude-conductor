@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // PostToolUse hook - Track plan.md modifications
 
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 
 async function main() {
@@ -18,7 +18,7 @@ async function main() {
   if (filePath.includes('conductor') && filePath.includes('plan.md')) {
     const timestamp = new Date().toISOString();
     const logFile = path.join(cwd, 'conductor', '.conductor_session_log');
-    fs.appendFileSync(logFile, `${timestamp}: Modified ${filePath}\n`);
+    await fs.appendFile(logFile, `${timestamp}: Modified ${filePath}\n`);
   }
 }
 
