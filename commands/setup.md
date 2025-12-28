@@ -2,7 +2,7 @@
 description: Initialize Conductor environment for context-driven development
 argument-hint: [project-type]
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Task
-model: claude-opus-4-5-20251101
+model: inherit
 ---
 
 # Conductor Setup
