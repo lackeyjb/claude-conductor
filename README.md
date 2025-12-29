@@ -473,6 +473,16 @@ If setup is interrupted, it can be resumed:
 /conductor:setup
 ```
 
+### Session Resumption
+
+Conductor automatically resumes work when starting a new session:
+
+1. **SessionStart hook** detects conductor project and shows current status
+2. **plan.md status markers** track progress (`[ ]` pending, `[~]` in-progress, `[x]` complete)
+3. **Run `/conductor:implement`** to continue from where you left off
+
+No special handoff files needed - plan.md is the single source of truth.
+
 ## Architecture
 
 Conductor uses Claude Code's plugin system:

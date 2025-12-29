@@ -209,35 +209,7 @@ This workflow can be customized during `/conductor:setup`:
 | Commit Strategy | Per Task | Per Task, Per Phase |
 | Git Notes | Enabled | Enabled, Disabled |
 | Mobile Testing | If Applicable | Required, Optional, Skip |
-| Context Threshold | 70% | 50%, 60%, 70%, 80%, 90%, Disabled |
-| Auto-Handoff | Enabled | Enabled, Disabled |
 | Parallel Agents | worktree | worktree, sequential, unsafe |
-
-## Context Management
-
-Conductor monitors context usage during implementation sessions. When the context threshold is reached:
-
-1. **Current task completes** - Work is never interrupted mid-task
-2. **Checkpoint commit created** - All progress is saved with git notes
-3. **Handoff state written** - Resume context preserved in `handoff-state.json`
-4. **Handoff prompt displayed** - Copy to start fresh session
-5. **Execution pauses** - User starts new session to continue
-
-### Why Context Management Matters
-
-Long implementation sessions can exhaust Claude's context window, leading to:
-- Degraded response quality
-- Lost context about earlier work
-- Inconsistent code decisions
-
-Auto-handoff ensures work is preserved and sessions stay productive by proactively transitioning before quality degrades.
-
-### Configuration Options
-
-- **Context Threshold**: Percentage of estimated context usage that triggers handoff (default: 70%)
-- **Auto-Handoff**: Enable/disable automatic handoff (default: Enabled)
-
-Set `Context Threshold` to `Disabled` if you prefer manual session management or have very short tracks.
 
 ## Parallel Agent Execution
 

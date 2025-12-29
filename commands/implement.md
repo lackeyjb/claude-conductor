@@ -54,25 +54,15 @@ Execute the implementation workflow for the selected track.
 
 ## Begin Implementation
 
-### Check for Handoff Resume
+### Session Resumption
 
-Before starting, check if resuming from a previous handoff:
+Conductor automatically resumes from plan.md status markers:
 
-1. **Check for handoff state**: Look for `conductor/tracks/<track_id>/handoff-state.json`
+1. **Find resumption point**: Scan plan.md for first `[~]` (in-progress) or first `[ ]` (pending) task
+2. **Announce**: "Resuming at Phase N: <name>, Task: <description>" (if continuing mid-phase)
+3. **Skip completed work**: Tasks marked `[x]` are already done
 
-2. **If handoff state exists**:
-
-   - Read the handoff state to get resume context
-   - Restore phase mode from state:
-     - If `run_all_phases: true` → resume in all-phases mode
-     - If `selected_phase` is set → resume in single-phase mode for that phase
-   - Announce: "Resuming from handoff at phase '<phase>', task '<next_task>'"
-   - Clear `.context_usage` file to reset threshold tracking
-   - Delete `handoff-state.json` after reading (resume is one-time)
-   - Skip Phase Discovery and Phase Selection (already determined)
-   - Skip to the `next_task` in the Task Execution Loop
-
-3. **If no handoff state**: Proceed with normal implementation flow
+No special handoff files needed - plan.md is the single source of truth.
 
 ### Update Track Status
 
@@ -275,43 +265,7 @@ The reviewer agent will:
 
 **Single-phase mode:** Announce "Phase N: <name> complete. Checkpoint: <sha>". Use AskUserQuestion: Continue to next phase / Take a break / Check status. Act accordingly.
 
-**All-phases mode:** Continue directly to next phase. Only stop at track completion or threshold.
-
-### Context Threshold Check
-
-After each task: Check `conductor/.context_usage` (written by hook). If `estimated_percent >= threshold`, trigger handoff protocol.
-
-## Context Handoff Protocol
-
-When threshold reached:
-
-1. **Announce:** "⚠️ Context threshold reached (X%). Initiating handoff..."
-
-2. **Checkpoint Commit:**
-   ```bash
-   git add . && git commit -m "conductor(checkpoint): Context threshold handoff - <track>"
-   ```
-
-3. **Git Notes:**
-   ```bash
-   git notes add -m "Handoff: Threshold reached. Track: <track_id>, Phase: <phase> (X/Y tasks), Next: <next_task>" $(git log -1 --format="%H")
-   ```
-
-4. **Write `handoff-state.json`:** Save current phase, task, mode (`run_all_phases`, `selected_phase`) to `conductor/tracks/<track_id>/handoff-state.json`
-
-5. **Display Handoff Prompt:**
-   ```
-   CONDUCTOR HANDOFF - Context threshold reached.
-
-   Start fresh session and run: /conductor:implement
-
-   Resume context:
-   - Track: <track_id>
-   - Phase: <phase> (X/Y tasks)
-   - Next: <next_task>
-   ```
-
-6. **STOP:** Do NOT continue to next task. Wait for user to start fresh session.
+**All-phases mode:** Continue directly to next phase. Only stop at track completion.
 
 ## Track Completion
 

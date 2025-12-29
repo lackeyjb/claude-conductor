@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-// SessionStart hook - Load Conductor context
+// SessionStart hook - Load Conductor context and show resumption info
 
 const fs = require('fs').promises;
 const path = require('path');
 
 // Batched file reads with concurrency limit to prevent file descriptor exhaustion
-async function batchedReadHandoffs(trackIds, tracksDir, concurrency = 5) {
+async function batchedReadPlans(trackIds, tracksDir, concurrency = 5) {
   const results = [];
   for (let i = 0; i < trackIds.length; i += concurrency) {
     const batch = trackIds.slice(i, i + concurrency);
     const batchResults = await Promise.all(batch.map(async (trackId) => {
       try {
         const content = await fs.readFile(
-          path.join(tracksDir, trackId, 'handoff-state.json'),
+          path.join(tracksDir, trackId, 'plan.md'),
           'utf8'
         );
-        return { trackId, handoff: JSON.parse(content) };
+        return { trackId, plan: content };
       } catch {
         return null;
       }
@@ -23,6 +23,42 @@ async function batchedReadHandoffs(trackIds, tracksDir, concurrency = 5) {
     results.push(...batchResults);
   }
   return results.filter(Boolean);
+}
+
+// Find next task from plan.md content
+function findNextTask(planContent) {
+  const lines = planContent.split('\n');
+  let currentPhase = null;
+
+  for (const line of lines) {
+    // Track current phase
+    const phaseMatch = line.match(/^## Phase \d+:\s*(.+?)(?:\s*\[checkpoint:|\s*$)/);
+    if (phaseMatch) {
+      currentPhase = phaseMatch[1].trim();
+    }
+
+    // Find in-progress task first
+    const inProgressMatch = line.match(/^- \[~\]\s*(?:Task:\s*)?(.+)/);
+    if (inProgressMatch) {
+      return {
+        task: inProgressMatch[1].trim(),
+        phase: currentPhase,
+        status: 'in_progress'
+      };
+    }
+
+    // Find first pending task
+    const pendingMatch = line.match(/^- \[ \]\s*(?:Task:\s*)?(.+)/);
+    if (pendingMatch) {
+      return {
+        task: pendingMatch[1].trim(),
+        phase: currentPhase,
+        status: 'pending'
+      };
+    }
+  }
+
+  return null;
 }
 
 async function main() {
@@ -65,28 +101,43 @@ async function main() {
 
   // Find current in-progress track
   const inProgressLine = lines.find(line => line.includes('[in-progress]'));
+  let currentTrackId = null;
   if (inProgressLine) {
-    const lineMatch = inProgressLine.match(/\[([^\]]+)\]/);
-    if (lineMatch) {
-      context += `**Current Track:** ${lineMatch[1]}\n`;
+    // Extract track ID from the line (last bracket content that looks like an ID)
+    const trackMatch = inProgressLine.match(/\[([a-z0-9_-]+)\]$/i);
+    if (trackMatch) {
+      currentTrackId = trackMatch[1];
+    }
+    // Extract description
+    const descMatch = inProgressLine.match(/Track:\s*(.+?)\s*\[/);
+    if (descMatch) {
+      context += `**Current Track:** ${descMatch[1]}\n`;
     }
   }
 
-  // Check for pending handoff state (batched reads with concurrency limit)
-  const handoffs = await batchedReadHandoffs(trackIds, tracksDir);
-  if (handoffs.length > 0) {
-    const { trackId, handoff } = handoffs[0]; // Only show first
-    context += `\n**⚠️ Handoff Pending:** Track '${trackId}' was paused at ${handoff.threshold_percent || 70}% context threshold.\n`;
-    context += `**Next Task:** ${handoff.next_task || 'Unknown'}\n`;
-    context += `**Resume:** Run \`/conductor:implement\` to continue.\n`;
+  // Find next task from in-progress track's plan.md
+  if (currentTrackId && trackIds.includes(currentTrackId)) {
+    const plans = await batchedReadPlans([currentTrackId], tracksDir);
+    if (plans.length > 0) {
+      const nextTask = findNextTask(plans[0].plan);
+      if (nextTask) {
+        if (nextTask.phase) {
+          context += `**Current Phase:** ${nextTask.phase}\n`;
+        }
+        const statusLabel = nextTask.status === 'in_progress' ? 'Resuming' : 'Next';
+        context += `**${statusLabel} Task:** ${nextTask.task}\n`;
+      }
+    }
   }
 
   // Check for orphaned worktrees (agents that may have crashed)
   const worktreesDir = path.join(cwd, '.worktrees');
   const worktrees = await fs.readdir(worktreesDir).catch(() => []);
   if (worktrees.length > 0) {
-    context += `\n**⚠️ ${worktrees.length} worktree(s) detected.** Run \`/conductor:agents\` to check status and clean up if needed.\n`;
+    context += `\n**Warning:** ${worktrees.length} worktree(s) detected. Run \`/conductor:agents\` to check status.\n`;
   }
+
+  context += `\nRun \`/conductor:implement\` to continue.`;
 
   // Output JSON with context
   console.log(JSON.stringify({
