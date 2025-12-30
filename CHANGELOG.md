@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-12-29
+
+### Changed
+- Session resumption now relies solely on plan.md status markers instead of automatic context threshold tracking
+
+### Removed
+- Automatic context threshold tracking and handoff mechanism
+- context-threshold.js hook and related Task hook configuration
+- Handoff sections from implement command documentation
+
+### Documentation
+- Added session resumption documentation to README.md
+- Simplified workflow documentation
+
 ## [1.1.1] - 2024-12-27
 
 ### Added
